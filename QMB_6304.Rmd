@@ -1,0 +1,224 @@
+---
+title: "Regression Project for QMB 6304"
+author: "Mandeep Singh"
+output: word_document
+---
+**Part 1: Preprocessing Part**
+```{r}
+
+#Preprocessing
+#1.
+rm(list=ls())
+library(car)
+library(rio)
+library(readxl)
+library(plyr)
+library(moments)
+library(corrplot)
+library(dplyr)
+
+Cabs=import("Project_6304 Regression Project Data.csv")
+colnames(Cabs)=tolower(make.names(colnames(Cabs)))
+```
+*The required libraries are loaded and then data is imported.*
+```{r}
+#2.
+set.seed(13394871)
+cab= Cabs[sample(1:nrow(Cabs),100,replace = FALSE),]
+```
+*Seed is set as my U number and a random sample of 100 rows is taken and is stored in the variable `cab`.*
+```{r}
+#3.
+str(cab)
+clean=subset(cab, trip_seconds!=0 & trip_miles != 0.00)
+cleanest= subset(clean, select = -c(tolls) )
+```
+*The abberancies which can be clearly seen in the data are the cases in which `trip_seconds` and `trip_miles` are 0 and other variables have some non zero value which is not feasible. Also, both these variables are independent variables which when 0(abberant case) can decrease the fit of the model. So, I have removed the cases in which either one or both of them are 0. Also, there is a column of `tolls` which is of no significance because it has the 0 value throughout the cases. After this cleaning process is done, we are left with 77 cases and 8 variables.*
+
+**Part 2: Analysis Part**
+```{r}
+#Analysis
+#1.
+#trip_seconds
+summary(cleanest$trip_seconds)
+skewness(cleanest$trip_seconds)
+kurtosis(cleanest$trip_seconds)
+p1 = density(cleanest$trip_seconds)
+plot(p1,pch=19,main="Density plot of trip_seconds")
+```
+*Distribution of trip_seconds is skewed right which can be seen in the density plot and through the skewness value. Kurtosis shows tail heavy data.*
+```{r}
+#trip_miles
+summary(cleanest$trip_miles)
+skewness(cleanest$trip_miles)
+kurtosis(cleanest$trip_miles)
+p2 = density(cleanest$trip_miles)
+plot(p2,pch=19,main="Density plot of miles")
+```
+*Distribution of trip_miles is skewed right which can be seen in the density plot and through the skewness value. Kurtosis shows tail heavy data.*
+```{r}
+#fare
+summary(cleanest$fare)
+skewness(cleanest$fare)
+kurtosis(cleanest$fare)
+p3 = density(cleanest$fare)
+plot(p3,pch=19,main="Density plot of fare")
+```
+*Distribution of fare is skewed right which can be seen in the density plot and through the skewness value. Kurtosis shows tail heavy data.*
+
+```{r}
+#tips
+summary(cleanest$tips)
+skewness(cleanest$tips)
+kurtosis(cleanest$tips)
+p4 = density(cleanest$tips)
+plot(p4,pch=19,main="Density plot of tips")
+```
+*Distribution of tips is skewed right which can be seen in the density plot and through the skewness value. Kurtosis shows tail heavy data.*
+
+```{r}
+#extras
+summary(cleanest$extras)
+skewness(cleanest$extras)
+kurtosis(cleanest$extras)
+p5 = density(cleanest$extras)
+plot(p5,pch=19,main="Density plot of extras")
+```
+*Distribution of extras is skewed right which can be seen in the density plot and through the skewness value. Kurtosis shows tail heavy data.*
+
+```{r}
+#trip_total
+summary(cleanest$trip_total)
+skewness(cleanest$trip_total)
+kurtosis(cleanest$trip_total)
+p6 = density(cleanest$trip_total)
+plot(p6,pch=19,main="Density plot of trip_total")
+```
+*Distribution of trip_total is skewed right which can be seen in the density plot and through the skewness value. Kurtosis shows tail heavy data.*
+
+```{r}
+
+#2.
+#Creating factor variable and then the table.
+cleanest$payment_type=as.factor(cleanest$payment_type)
+str(cleanest$payment_type)
+summary(cleanest$payment_type)
+levels(cleanest$payment_type)
+
+```
+*Using the payment_type factor variable, table of 'number of cases in each level' is created.*
+
+```{r}
+#3.
+corr.data = cleanest[,2:7]
+cm=cor(corr.data)
+#Number correlation plot matrix
+corrplot(cm,method = "number")
+#Circle correlation plot matrix
+corrplot(cm,method = "circle")
+```
+*Here is the correlation matrix using all continuous variables except taxi_id.Two correlation plots have been shown, one in number format and the other in circle format. A correlation plot represents correlation between different variables and correlation means the relationship between two variables. The correlation matrix of circle shows how much two variables are correlated by depicting the size of the circle and its colour. A bigger circle and a darker blue colour represent more correlation between the two variables. For example, trip_total is highly correlated with fare. Similar is the case with number correlation matrix. A bigger number represent more correlation between the two variables. The number ranges from 0 to 1 with 0 representing no corrrelation and 1 representing highest correlation. Pictorial representation of correlation matrix is relatively easy and can be easily understood by non stats people as well.*
+```{r}
+#4.
+#Applying regression model
+regression.output=lm(fare~trip_seconds+trip_miles+payment_type,data=cleanest)
+summary(regression.output)
+#Getting Confidence interval
+confint(regression.output)
+```
+*This regression model uses fare as the dependent variable and and trip_seconds, trip_miles and payment_type are independent variable. trip_seconds and trip_miles have significant p values out of the independent variables. R-squared value is of 0.8594 and Adjusted R-squared value is of 0.8536 which signifies that 85.36% of variance is explained by these independent varibles.*
+*Impact of each significant independent variable: With an increment of 1 second in trip_second, we can expect an increment of $0.012 or With an increment of 100 seconds in trip_second, we can expect an increment of $1.2. *
+*With an increment of 1 mile in trip_mile, we can expect an increment of $0.84 or With an increment of 100 mile in trip_mile, we can expect an increment of $84.*
+*Others are insignificant variables because of their high p value so their impact is not taken into consideration.*
+*The confidence interval of 95% can be seen above ranging from 2.5% to 97.5% for all the variables.*
+```{r}
+#5.
+#model1
+regression.output1=lm(fare~trip_seconds+poly(trip_seconds,2)+trip_miles+poly(trip_miles,2)+ trip_seconds:trip_miles+payment_type,data=cleanest)
+summary(regression.output1)
+#model2
+regression.output2=lm(fare~trip_seconds+poly(trip_seconds,2)+trip_miles+payment_type,data=cleanest)
+summary(regression.output2)
+#model3
+regression.output3=lm(fare~trip_seconds+trip_miles+poly(trip_miles,2)+payment_type,data=cleanest)
+summary(regression.output3)
+#model4
+regression.output4=lm(fare~trip_seconds+trip_miles+trip_seconds:trip_miles+payment_type,
+                      data=cleanest)
+summary(regression.output4)
+#model5
+regression.output5=lm(fare~trip_seconds+trip_miles+trip_seconds:trip_miles
+                      +poly(trip_seconds,2):poly(trip_seconds,2)
+                      +payment_type,data=cleanest)
+summary(regression.output5)
+#model6
+regression.output6=lm(fare~trip_seconds+poly(trip_seconds,2)
+                      +trip_miles+poly(trip_miles,2)
+                      +trip_seconds:trip_miles+poly(trip_seconds,2):poly(trip_seconds,2)
+                      +payment_type,data=cleanest)
+summary(regression.output6)
+```
+*To achieve a better fit for the model, I have tried various variable transforms and relevant interactions. I have added squares of trip_seconds and trip_miles and interaction of both the independent variables. After doing the possible combinations, it can be concluded that model 4 has the best fit because of its most number variables with significant p values(3) and highest adjusted r squared value.*
+```{r}
+#6.
+#Applying the best regression model
+regression.output4=lm(fare~trip_seconds+trip_miles+trip_seconds:trip_miles+payment_type,
+                      data=cleanest)
+summary(regression.output4)
+```
+*The above regression model provides us with the best fit because of its best adjusted r-squared values among others and most number of significant p values.*
+*It takes in independent variables as trip_seconds, trip_miles, interaction between these two i.e. trip_seconds:trip_miles and payment_type. It has an adjusted R-squared value of 0.862.*
+
+```{r}
+#Linearity assumption check
+plot(cleanest$fare,regression.output4$fitted.values,
+     pch=19,main="Fare Actual v. Fitted")+abline(0,1,lwd=3,col="blue")
+```
+*It can be inferred from the above graph that linearity assumption does not hold true because considerable number of points lies away from the line. Weak linearity can be observed.*
+```{r}
+#Normality assumption check
+qqnorm(regression.output4$residuals,pch=19)
+qqline(regression.output4,lwd=19,col="blue")
+```
+*It can be inferred from the above graph that normality assumption hold true because considerable number of points lies on the line. There are some points on both the ends but not a large number of points.*
+
+```{r}
+#Equality of Variances assumption check
+plot(regression.output4$fitted.values,rstandard(regression.output4),pch=19)+abline(0,0,col="blue",lwd=3)
+```
+*It can be inferred that there is a pattern which leads to the conclusion that Equality of Variances assumption is not held true in this case. There are some points which are not aligning with the pattern but frequency of these points is very less.*
+```{r}
+
+#7.
+#Identifying leverage points
+lev=hat(model.matrix(regression.output4))
+plot(lev,pch=19,,xlim=c(0,80),ylim=c(0,1.5)) + abline(3*mean(lev),0,col="blue",lwd=3)
+#Pointing out leverage points
+cleanest[lev>(3*mean(lev)),]
+#Removing leverage points
+sans_lev=filter(cleanest,taxi_id!=4265)
+sans_lev=filter(sans_lev,taxi_id!=6299)
+sans_lev=filter(sans_lev,taxi_id!=4986)
+sans_lev=filter(sans_lev,taxi_id!=3463)
+
+#Applying the same regression model on data without leverage points
+regression.output.sans_lev=lm(fare~trip_seconds+trip_miles+trip_seconds:trip_miles+payment_type,
+                      data=sans_lev)
+summary(regression.output.sans_lev)
+```
+*After identifying and removing the inappropriately high leverage points, the same regression model was ran on the new data(without leverage points) and the quality of fit in this final regression model was worse than before. The number of variables with significant p-values is just 1 now i.e. trip_seconds. Also the adjusted R-squared value is now reduced to 0.8375 from 0.862. The quality of fit in this regression model has gone down.*
+```{r}
+#8.
+#Setting a different seed and taking a random sample.
+set.seed(13394876)
+cab_8= Cabs[sample(1:nrow(Cabs),100,replace = FALSE),]
+#Applying the same cleaning procedure
+clean8=subset(cab_8, trip_seconds!=0 & trip_miles != 0.00)
+cleanest8= subset(clean8, select = -c(tolls) )
+#Applying the same regression model on this new data
+regression.outputfinal=lm(fare~trip_seconds+trip_miles+trip_seconds:trip_miles+payment_type,
+                      data=cleanest8)
+summary(regression.outputfinal)
+```
+*After applying the regression model on the new data, it can be observed that the new model fits worse than the previous model. The adjusted r square got down from 0.862 to 0.8359. In this model, there are 3 variables with significant p values i.e. trip_seconds, trip_miles and trip_seconds:trip_miles.*
+
